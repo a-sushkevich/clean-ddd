@@ -71,6 +71,10 @@ export class DrizzleProductRepository implements ProductRepository {
     return DrizzleProductRepository.toDomain(rows[0]);
   }
 
+  async delete(id: ProductId): Promise<void> {
+    await this.db.delete(products).where(eq(products.id, id.getValue()));
+  }
+
   async findAll(filters: ProductFilters): Promise<Product[]> {
     const conditions: SQL[] = [];
 
