@@ -1,10 +1,19 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CreateProductCommand } from '../application/use-cases/create-product/create-product.command';
 import { ProductResponseDto } from './dtos/product-response.dto';
 import { ListProductsQuery } from '../application/queries/list-products.query';
 import { Product } from '../domain/entities/product.entity';
+import { GetProductQuery } from '../application/queries/get-product.query';
 
 @Controller('products')
 export class ProductsController {
@@ -42,5 +51,16 @@ export class ProductsController {
     );
 
     return products.map((product) => ProductResponseDto.fromDomain(product));
+  }
+
+  @Get(':id')
+  async findOne(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<ProductResponseDto> {
+    const product = await this.queryBus.execute<GetProductQuery, Product>(
+      new GetProductQuery(id),
+    );
+
+    return ProductResponseDto.fromDomain(product);
   }
 }
