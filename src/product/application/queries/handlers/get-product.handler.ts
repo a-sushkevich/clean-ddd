@@ -1,16 +1,16 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { GetProductQuery } from '../get-product.query';
-import { Product } from 'src/product/domain/entities/product.entity';
+import { Product } from '../../../../product/domain/entities/product.entity';
 import { Inject } from '@nestjs/common';
 import {
   PRODUCT_REPOSITORY,
   type ProductRepository,
 } from '../../ports/product.repository.port';
-import { ProductId } from 'src/product/domain/value-objects/product-id.vo';
+import { ProductId } from '../../../..//product/domain/value-objects/product-id.vo';
 import {
   ApplicationException,
   ApplicationExceptionCode,
-} from 'src/shared/domain/exceptions/application.exception';
+} from '../../../../shared/domain/exceptions/application.exception';
 
 @QueryHandler(GetProductQuery)
 export class GetProductHandler implements IQueryHandler<
