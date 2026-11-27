@@ -4,6 +4,7 @@ import { pgEnum, uuid } from 'drizzle-orm/pg-core';
 import { pgTable } from 'drizzle-orm/pg-core';
 import { customers } from './customers.schema';
 import { products } from './products.schema';
+import { relations } from 'drizzle-orm';
 
 export const orderStatusEnum = pgEnum('order_status', [
   'pending',
@@ -52,3 +53,14 @@ export const orderItems = pgTable('order_items', {
   discountCurrency: varchar('discount_currency', { length: 3 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+export const ordersRelations = relations(orders, ({ many }) => ({
+  items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+}));

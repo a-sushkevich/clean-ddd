@@ -84,19 +84,55 @@ export class DrizzleOrderRepository implements OrderRepositoryPort {
   }
 
   async findById(id: OrderId): Promise<Order | null> {
-    const orderRows = await this.db
-      .select()
-      .from(orders)
-      .where(eq(orderItems.orderId, id.getValue()));
+    // Instead of using two separate quiries we use drizzle relations mechanism
+    // const orderRows = await this.db
+    //   .select()
+    //   .from(orders)
+    //   .where(eq(orderItems.orderId, id.getValue()));
 
-    if (orderRows.length === 0) return null;
+    // if (orderRows.length === 0) return null;
 
-    const itemRows = await this.db
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, id.getValue()));
+    // const itemRows = await this.db
+    //   .select()
+    //   .from(orderItems)
+    //   .where(eq(orderItems.orderId, id.getValue()));
 
-    return DrizzleOrderRepository.toDomain(orderRows[0], itemRows);
+    const result = await this.db.query.orders.findFirst({
+      where: eq(orders.id, id.getValue()),
+      with: { items: true },
+    });
+
+    if (!result) return null;
+
+    return DrizzleOrderRepository.toDomain(result, result.items);
+  }
+
+  async findByCustomerId(customerId: string): Promise<Order[]> {
+    const results = await this.db.query.orders.findMany({
+      where: eq(orders.customerId, customerId),
+      with: { items: true },
+    });
+
+    return results.map((result) =>
+      DrizzleOrderRepository.toDomain(result, result.items),
+    );
+  }
+
+  async findAll(): Promise<Order[]> {
+    const results = await this.db.query.orders.findMany({
+      with: { items: true },
+    });
+
+    return results.map((result) =>
+      DrizzleOrderRepository.toDomain(result, result.items),
+    );
+  }
+
+  async delete(id: OrderId): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await tx.delete(orderItems).where(eq(orderItems.orderId, id.getValue()));
+      await tx.delete(orders).where(eq(orders.id, id.getValue()));
+    });
   }
 
   private static toOrderPersistence(order: Order): typeof orders.$inferSelect {
