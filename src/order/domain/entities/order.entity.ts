@@ -11,7 +11,7 @@ interface OrderProps {
   customerId: string;
   status: OrderStatus;
   items: OrderItem[];
-  shippingAdress: ShippingAddress;
+  shippingAddress: ShippingAddress;
   trackingNumber: string | null;
   notes: string | null;
   createdAt: Date;
@@ -23,7 +23,7 @@ export class Order extends AggregateRoot {
   private readonly _customerId: string;
   private _status: OrderStatus;
   private _items: OrderItem[];
-  private readonly _shippingAdress: ShippingAddress;
+  private readonly _shippingAddress: ShippingAddress;
   private _trackingNumber: string | null;
   private _notes: string | null;
   private readonly _createdAt: Date;
@@ -35,7 +35,7 @@ export class Order extends AggregateRoot {
     this._customerId = props.customerId;
     this._status = props.status;
     this._items = props.items;
-    this._shippingAdress = props.shippingAdress;
+    this._shippingAddress = props.shippingAddress;
     this._trackingNumber = props.trackingNumber;
     this._notes = props.notes;
     this._createdAt = props.createdAt;
@@ -45,7 +45,7 @@ export class Order extends AggregateRoot {
   static place(
     customerId: string,
     items: OrderItem[],
-    shippingAdress: ShippingAddress,
+    shippingAddress: ShippingAddress,
   ) {
     if (items.length === 0) {
       throw new DomainException('An order must contain at least one item');
@@ -59,7 +59,7 @@ export class Order extends AggregateRoot {
       customerId,
       status: OrderStatus.pending(),
       items,
-      shippingAdress,
+      shippingAddress,
       trackingNumber: null,
       notes: null,
       createdAt: now,
@@ -104,7 +104,7 @@ export class Order extends AggregateRoot {
   }
 
   get shippingAddress(): ShippingAddress {
-    return this._shippingAdress;
+    return this._shippingAddress;
   }
 
   get trackingNumber(): string | null {

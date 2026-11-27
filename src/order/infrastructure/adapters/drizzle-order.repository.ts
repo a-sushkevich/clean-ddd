@@ -11,6 +11,11 @@ import {
 } from '../../../shared/infrastructure/database/postgres/schema/orders.schema';
 import { OrderItem } from '../../domain/entities/order-item.entity';
 import { and, eq, notInArray } from 'drizzle-orm';
+import { Money } from '../../../shared/domain/value-objects/money.vo';
+import { UniqueId } from '../../../shared/domain/value-objects/unique-id.vo';
+import { ShippingAddress } from '../../domain/value-objects/shipping-address.vo';
+import { OrderId } from '../../domain/value-objects/order-id.vo';
+import { OrderStatus } from '../../domain/value-objects/order-status.vo';
 
 @Injectable()
 export class DrizzleOrderRepository implements OrderRepositoryPort {
@@ -78,6 +83,22 @@ export class DrizzleOrderRepository implements OrderRepositoryPort {
     });
   }
 
+  async findById(id: OrderId): Promise<Order | null> {
+    const orderRows = await this.db
+      .select()
+      .from(orders)
+      .where(eq(orderItems.orderId, id.getValue()));
+
+    if (orderRows.length === 0) return null;
+
+    const itemRows = await this.db
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.orderId, id.getValue()));
+
+    return DrizzleOrderRepository.toDomain(orderRows[0], itemRows);
+  }
+
   private static toOrderPersistence(order: Order): typeof orders.$inferSelect {
     const total = order.getTotal();
 
@@ -115,5 +136,49 @@ export class DrizzleOrderRepository implements OrderRepositoryPort {
       discountCurrency: item.discount?.getCurrency() ?? null,
       createdAt: new Date(),
     };
+  }
+
+  private static toDomain(
+    orderRow: typeof orders.$inferSelect,
+    itemRows: (typeof orderItems.$inferSelect)[],
+  ): Order {
+    const items = itemRows.map((row) => {
+      const discount =
+        row.discountAmount !== null && row.discountCurrency !== null
+          ? Money.create(row.discountAmount / 100, row.discountCurrency)
+          : null;
+
+      return OrderItem.reconstitute({
+        id: new UniqueId(row.id),
+        productId: row.productId,
+        productName: row.productName,
+        unitPrice: Money.create(
+          row.unitPriceAmount / 100,
+          row.unitPriceCurrency,
+        ),
+        quantity: row.quantity,
+        discount,
+      });
+    });
+
+    const shippingAddress = ShippingAddress.create({
+      street: orderRow.shippingStreet ?? '',
+      city: orderRow.shippingCity ?? '',
+      state: orderRow.shippingState ?? '',
+      zipCode: orderRow.shippingZipCode ?? '',
+      country: orderRow.shippingZipCode ?? '',
+    });
+
+    return Order.reconstitute({
+      id: new OrderId(orderRow.id),
+      customerId: orderRow.customerId,
+      status: OrderStatus.fromString(orderRow.status),
+      items,
+      shippingAddress,
+      trackingNumber: orderRow.trackingNumber,
+      notes: orderRow.notes,
+      createdAt: orderRow.createdAt,
+      updatedAt: orderRow.updatedAt,
+    });
   }
 }
